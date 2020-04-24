@@ -31,7 +31,7 @@ def main():
     k = 8
     radius = 1
 
-    root_dir = '/home/gc/PycharmProjects/deepblue/lesson_2/kitty/' # 数据集路径
+    root_dir = '/home/gc/github_repository/DeepBlue/lesson_2/kitty/' # 数据集路径
     cat = os.listdir(root_dir)
     iteration_num = len(cat)
 
@@ -71,6 +71,10 @@ def main():
                                                                      radius_time_sum*1000/iteration_num,
                                                                      brute_time_sum*1000/iteration_num))
 
+    otc_knn = knn_time_sum*1000
+    otc_radius = radius_time_sum*1000
+    otc_brute = brute_time_sum*1000
+
     print("kdtree --------------")
     construction_time_sum = 0
     knn_time_sum = 0
@@ -105,6 +109,13 @@ def main():
                                                                      knn_time_sum * 1000 / iteration_num,
                                                                      radius_time_sum * 1000 / iteration_num,
                                                                      brute_time_sum * 1000 / iteration_num))
+    kd_knn = knn_time_sum * 1000
+    kd_radius = radius_time_sum * 1000
+    kd_brute = brute_time_sum * 1000
+
+    print("Octree knn/brute =  %.3f,   radius/bruet = %.3f" % (otc_knn/otc_brute, otc_radius/otc_brute) )
+    print("Kdtree knn/brute =  %.3f,   radius/bruet = %.3f" % (kd_knn / otc_brute, kd_radius / otc_brute) )
+
 
 
 
