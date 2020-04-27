@@ -4,25 +4,72 @@ import numpy as np
 from numpy import *
 import pylab
 import random,math
+from scipy import stats
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from scipy.stats import multivariate_normal
 plt.style.use('seaborn')
 
+
+
 class GMM(object):
     def __init__(self, n_clusters, max_iter=50):
         self.n_clusters = n_clusters
         self.max_iter = max_iter
+
+    def prb_2d_guass(self,input_point,mu, var):
+        x_u1 = input_point[0] - mu[0]
+        x_u2 = input_point[1] - mu[1]
+        P = np.exp(-0.5 * (x_u1 * x_u1 / var[0] + x_u2 * x_u2 / var[1]))
+        P = P / (2 * math.pi * math.sqrt(var[0] * var[1]))
+        return P
     
     # 屏蔽开始
-    # 更新W
-    
+    # 更新W = Nk
+    def update_Nk_gama(self):
+        data_num    = self.data.shape[0]
+        cluster_num = self.n_clusters
+        cur_pi  = self.weight_pi
+        cur_mu  = self.mu
+        cur_var = self.var
+
+        for data_idx in range(data_num):
+            cur_data = self.data[data_idx]
+            P_down = 0
+            for cluster in range(cluster_num):
+                prob_data = self.prb_2d_guass(cur_data, cur_mu[cluster],cur_var[cluster])
+                P_down += cur_pi[cluster] * prob_data
+            for cluster in range(cluster_num):
+                P_up = cur_pi[cluster] * self.prb_2d_guass(cur_data, cur_mu[cluster],cur_var[cluster])
+                self.gama[data_idx, cluster] = P_up / P_down
+        self.Nk = np.sum(self.gama, axis= 0)
+
+
+
 
     # 更新pi
  
         
     # 更新Mu
+    def update_mu(self):
+        gama0 = self.gama[:, 0]
+        gama1 = self.gama[:, 1]
+        gama2 = self.gama[:, 2]
+        assert self.num_data == gama0.shape[0]
+        new_mu0 = np.array([0.0, 0.0], dtype= np.float32)
+        new_mu1 = np.array([0.0, 0.0], dtype=np.float32)
+        new_mu2 = np.array([0.0, 0.0], dtype=np.float32)
+        for i in range(self.num_data):
+            new_mu0 += gama0[i] * self.data[i]#这一类的高斯分布均值
+            new_mu1 += gama1[i] * self.data[i]
+            new_mu2 += gama2[i] * self.data[i]
+
+        self.mu[0] = new_mu0/np.sum(gama0)
+        self.mu[1] = new_mu1 / np.sum(gama0)
+        self.mu[2] = new_mu2 / np.sum(gama0)
+
+
 
 
     # 更新Var
@@ -32,13 +79,25 @@ class GMM(object):
     
     def fit(self, data):
         # 作业3
-        # 屏蔽开始
+        # 屏蔽开始,init_mu，可以随机选三个数据点
+        self.data = data
+        self.num_data = self.data.shape[0]
+        self.mu  = np.random.randn(self.n_clusters, data.shape[1])
+        self.var = np.fabs(np.random.randn(self.n_clusters, data.shape[1]))
+        weight_pi       = 1 / self.n_clusters #权重
+        self.weight_pi = [ weight_pi for i in range(self.n_clusters)]
+        self.gama  = np.zeros([data.shape[0], self.n_clusters],np.float32)# N * 3
+        self.Nk = np.zeros([0,0,0],dtype=np.float32)
+
 
 
         # 屏蔽结束
     
     def predict(self, data):
         # 屏蔽开始
+        print('x')
+        self.update_Nk_gama()
+        self.update_mu()
 
         # 屏蔽结束
 
