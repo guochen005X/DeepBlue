@@ -12,6 +12,10 @@ class K_Means(object):
     def fit(self, data):
         # 作业1
         # 屏蔽开始
+        self.data = data
+        self.num_data = data.shape[0]
+        self.Dimetion = data.shape[1]
+
 
         # 屏蔽结束
 

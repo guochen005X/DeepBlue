@@ -14,10 +14,14 @@ def prb_2d_guass(data_x, data_y):
                 print(data_x[i], data_y[j])
             x_u1 = data_x[i] - mu[0]
             x_u2 = data_y[j] - mu[1]
+            data = np.array([x_u1,x_u2],dtype=np.float32)
+            data = data.reshape([2,1])
+            sigma = np.diag(var)
 
-            P = np.exp(-0.5* (x_u1*x_u1/var[0] + x_u2*x_u2/var[1] ))
-            P = P/(2*math.pi * math.sqrt(var[0] * var[1]))
-            z[i,j] = P
+            P = np.exp(-0.5* np.matmul(np.matmul(data.T,np.linalg.inv(sigma)),  data ) )
+            #P = np.exp(-0.5* (x_u1*x_u1/var[0] + x_u2*x_u2/var[1] ))
+            P = P/(2*math.pi * math.sqrt(np.linalg.det(sigma)))#math.sqrt(var[0] * var[1])
+            z[i,j] = P[0,0]
     return z
 
 fig = plt.figure()
@@ -76,3 +80,21 @@ ax.set_ylabel('y')
 ax.set_zlabel('z')
 
 plt.show()
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+from matplotlib import style
+style.use('fivethirtyeight')
+mu_params = [[0,0]]
+sd_params = [[1,1]]
+x = np.linspace(-5, 5, 100)
+y = np.linspace(-5, 5, 100)
+
+
+z = stats.norm(mu_params, sd_params).pdf((x[50],y[50]))
+
+
+print(z)

@@ -19,11 +19,20 @@ class GMM(object):
         self.max_iter = max_iter
 
     def prb_2d_guass(self,input_point,mu, var):
-        x_u1 = input_point[0] - mu[0]
-        x_u2 = input_point[1] - mu[1]
-        P = np.exp(-0.5 * (x_u1 * x_u1 / var[0] + x_u2 * x_u2 / var[1]))
-        P = P / (2 * math.pi * math.sqrt(var[0] * var[1]))
+        # x_u1 = input_point[0] - mu[0]
+        # x_u2 = input_point[1] - mu[1]
+        # data = np.array([x_u1, x_u2], dtype=np.float32)
+        # data = data.reshape([2, 1])
+
+        sigma = var
+
+        P = np.exp(-0.5 * np.matmul(np.matmul( (input_point - mu).T, np.linalg.inv(sigma)), (input_point - mu)))
+        P = P / (2 * math.pi * math.sqrt(np.linalg.det(sigma)))  # math.sqrt(var[0] * var[1])
         return P
+        # P = np.exp(-0.5 * (x_u1 * x_u1 / var[0] + x_u2 * x_u2 / var[1]))
+        # P = P / (2 * math.pi * math.sqrt(var[0] * var[1]))
+        # P = np.exp(-0.5* (x_u1*x_u1/var[0] + x_u2*x_u2/var[1] ))
+
     
     # 屏蔽开始
     # 更新W = Nk
@@ -45,10 +54,9 @@ class GMM(object):
                 self.gama[data_idx, cluster] = P_up / P_down
         self.Nk = np.sum(self.gama, axis= 0)
 
-
-
-
     # 更新pi
+    def update_pi(self):
+        self.weight_pi = self.Nk/self.num_data
  
         
     # 更新Mu
@@ -65,14 +73,28 @@ class GMM(object):
             new_mu1 += gama1[i] * self.data[i]
             new_mu2 += gama2[i] * self.data[i]
 
-        self.mu[0] = new_mu0/np.sum(gama0)
-        self.mu[1] = new_mu1 / np.sum(gama0)
-        self.mu[2] = new_mu2 / np.sum(gama0)
+        self.mu[0] = new_mu0 / np.sum(gama0)
+        self.mu[1] = new_mu1 / np.sum(gama1)
+        self.mu[2] = new_mu2 / np.sum(gama2)
 
 
 
 
     # 更新Var
+    def update_var(self):
+        # 第一类高斯分布的方差
+        temp_data = self.data
+        for j in range(self.n_clusters):
+            temp_mat_var = np.zeros([2, 2], dtype=np.float32)
+            for i in range(self.num_data):
+                temp_diff = temp_data[i] - self.mu[j]
+                temp_diff = np.reshape(temp_diff,[2,1])
+
+                temp_mat_var += self.gama[i,j] * temp_diff * temp_diff.T
+            self.var[j] = temp_mat_var / self.Nk[j]
+
+        #print(temp_mat_var)
+
 
 
     # 屏蔽结束
@@ -83,11 +105,52 @@ class GMM(object):
         self.data = data
         self.num_data = self.data.shape[0]
         self.mu  = np.random.randn(self.n_clusters, data.shape[1])
-        self.var = np.fabs(np.random.randn(self.n_clusters, data.shape[1]))
+        #[0.5, 0.5], [5.5, 2.5], [1, 7]
+
+        self.mu[0] = np.random.randn(1, data.shape[1])
+        self.mu[1] = np.random.randn(1, data.shape[1])
+        self.mu[2] = np.random.randn(1, data.shape[1])
+
+        # self.mu[0] = np.array([0.3, 0.7],dtype=np.float32)
+        # self.mu[1] = np.array([5.7, 3.5],dtype=np.float32)
+        # self.mu[2] = np.array([2, 10],dtype=np.float32)
+
+        #因为是二维数据，所以协方差矩阵是一个二维对角矩阵，在这里简化为一个数组为2的
+        self.var = np.fabs(np.random.randn(self.n_clusters, data.shape[1], data.shape[1]))
+
+        self.var[0] = np.diag(np.random.rand(2))
+        self.var[1] = np.diag(np.random.rand(2))
+        self.var[2] = np.diag(np.random.rand(2))
+
+        # self.var[0] = np.diag(np.array([2.1, 2.1], dtype=np.float32))
+        # self.var[1] = np.diag(np.array([3.1, 4.1], dtype=np.float32))
+        # self.var[2] = np.diag(np.array([8.1, 5.1], dtype=np.float32))
         weight_pi       = 1 / self.n_clusters #权重
-        self.weight_pi = [ weight_pi for i in range(self.n_clusters)]
+        #self.weight_pi = [ weight_pi for i in range(self.n_clusters)]
+        self.weight_pi = [0.2, 0.3, 0.5]
         self.gama  = np.zeros([data.shape[0], self.n_clusters],np.float32)# N * 3
         self.Nk = np.zeros([0,0,0],dtype=np.float32)
+        self.loss = -float('Inf')
+
+
+    def loss_cost(self):
+        temp_data = self.data
+        loss = 0
+        for i in range(self.num_data):
+            p1 = 0
+            for j in range(self.n_clusters):
+                p1 += self.weight_pi[j] * self.prb_2d_guass(temp_data[i], self.mu[j], self.var[j])
+            loss += math.log(p1)
+
+        if loss > self.loss:
+            self.loss = loss
+            return True
+        else:
+            print('cur_loss = ',loss)
+            print('pre_loss = ', self.loss)
+            return False
+
+
 
 
 
@@ -96,8 +159,21 @@ class GMM(object):
     def predict(self, data):
         # 屏蔽开始
         print('x')
-        self.update_Nk_gama()
-        self.update_mu()
+        iterate_i = 0
+        while self.loss_cost(): #
+            self.update_Nk_gama()
+            self.update_mu()
+            self.update_var()
+            self.update_pi()
+
+            iterate_i += 1
+            print('iterate : ', iterate_i)
+            print('loss = ',self.loss)
+        print('mu', self.mu)
+        print('var', self.var)
+        return self.gama
+
+
 
         # 屏蔽结束
 
@@ -117,14 +193,16 @@ def generate_X(true_Mu, true_Var):
     # 显示数据
     plt.figure(figsize=(10, 8))
     plt.axis([-10, 15, -5, 15])
-    plt.scatter(X1[:, 0], X1[:, 1], s=5)
-    plt.scatter(X2[:, 0], X2[:, 1], s=5)
-    plt.scatter(X3[:, 0], X3[:, 1], s=5)
+    plt.scatter(X1[:, 0], X1[:, 1],  s=5)# '#377eb8'
+    plt.scatter(X2[:, 0], X2[:, 1],  s=5)
+    plt.scatter(X3[:, 0], X3[:, 1],  s=5)
     plt.show()
     return X
 
 if __name__ == '__main__':
     # 生成数据
+    # true_Mu = [[0.5, 0.5], [5.5, 2.5], [1, 7]]
+    # true_Var = [[1, 3], [2, 2], [6, 2]]
     true_Mu = [[0.5, 0.5], [5.5, 2.5], [1, 7]]
     true_Var = [[1, 3], [2, 2], [6, 2]]
     X = generate_X(true_Mu, true_Var)
@@ -132,7 +210,19 @@ if __name__ == '__main__':
     gmm = GMM(n_clusters=3)
     gmm.fit(X)
     cat = gmm.predict(X)
-    print(cat)
+    cluster_total = np.argmax(cat, axis=1)
+    cluster0 = np.where(cluster_total == 0)[0]
+    cluster1 = np.where(cluster_total == 1)[0]
+    cluster2 = np.where(cluster_total == 2)[0]
+
+    plt.figure(figsize=(10, 8))
+    plt.axis([-10, 15, -5, 15])
+    plt.scatter(X[cluster0, 0], X[cluster0, 1], c='#984ea3',  s=5)  # '#377eb8'
+    plt.scatter(X[cluster1, 0], X[cluster1, 1], c='#a65628', s=5)  # '#377eb8'
+    plt.scatter(X[cluster2, 0], X[cluster2, 1], c='#f781bf' , s=5)  # '#377eb8'
+
+    plt.show()
+    print(cluster_total)
     # 初始化
 
     
