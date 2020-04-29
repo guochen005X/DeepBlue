@@ -37,7 +37,7 @@ class GMM(object):
     # 屏蔽开始
     # 更新W = Nk
     def update_Nk_gama(self):
-        data_num    = self.data.shape[0]
+        data_num    = self.num_data
         cluster_num = self.n_clusters
         cur_pi  = self.weight_pi
         cur_mu  = self.mu
@@ -61,21 +61,18 @@ class GMM(object):
         
     # 更新Mu
     def update_mu(self):
-        gama0 = self.gama[:, 0]
-        gama1 = self.gama[:, 1]
-        gama2 = self.gama[:, 2]
-        assert self.num_data == gama0.shape[0]
-        new_mu0 = np.array([0.0, 0.0], dtype= np.float32)
-        new_mu1 = np.array([0.0, 0.0], dtype=np.float32)
-        new_mu2 = np.array([0.0, 0.0], dtype=np.float32)
-        for i in range(self.num_data):
-            new_mu0 += gama0[i] * self.data[i]#这一类的高斯分布均值
-            new_mu1 += gama1[i] * self.data[i]
-            new_mu2 += gama2[i] * self.data[i]
 
-        self.mu[0] = new_mu0 / np.sum(gama0)
-        self.mu[1] = new_mu1 / np.sum(gama1)
-        self.mu[2] = new_mu2 / np.sum(gama2)
+        assert self.num_data == self.gama.shape[0]
+        new_mu = np.zeros(shape=[self.n_clusters,self.dimention_data], dtype=np.float32)
+        for j in range(self.n_clusters):
+            for i in range(self.num_data):
+                new_mu[j] += self.gama[i, j] * self.data[i]#这一类的高斯分布均值
+
+        for i in range(self.n_clusters):
+            self.mu[i] = new_mu[i] / np.sum(self.gama[:, 0])
+        # self.mu[0] = new_mu0 / np.sum(gama0)
+        # self.mu[1] = new_mu1 / np.sum(gama1)
+        # self.mu[2] = new_mu2 / np.sum(gama2)
 
 
 
@@ -85,10 +82,10 @@ class GMM(object):
         # 第一类高斯分布的方差
         temp_data = self.data
         for j in range(self.n_clusters):
-            temp_mat_var = np.zeros([2, 2], dtype=np.float32)
+            temp_mat_var = np.zeros([self.dimention_data, self.dimention_data], dtype=np.float32)
             for i in range(self.num_data):
                 temp_diff = temp_data[i] - self.mu[j]
-                temp_diff = np.reshape(temp_diff,[2,1])
+                temp_diff = np.reshape(temp_diff,[self.dimention_data,1])
 
                 temp_mat_var += self.gama[i,j] * temp_diff * temp_diff.T
             self.var[j] = temp_mat_var / self.Nk[j]
@@ -104,32 +101,31 @@ class GMM(object):
         # 屏蔽开始,init_mu，可以随机选三个数据点
         self.data = data
         self.num_data = self.data.shape[0]
-        self.mu  = np.random.randn(self.n_clusters, data.shape[1])
+        self.dimention_data = self.data.shape[1]
+        self.mu  = np.random.randn(self.n_clusters, self.dimention_data)
         #[0.5, 0.5], [5.5, 2.5], [1, 7]
 
-        self.mu[0] = np.random.randn(1, data.shape[1])
-        self.mu[1] = np.random.randn(1, data.shape[1])
-        self.mu[2] = np.random.randn(1, data.shape[1])
+        for i in range(self.n_clusters):
+            self.mu[i] = np.random.randn(1, self.dimention_data)
+
 
         # self.mu[0] = np.array([0.3, 0.7],dtype=np.float32)
         # self.mu[1] = np.array([5.7, 3.5],dtype=np.float32)
         # self.mu[2] = np.array([2, 10],dtype=np.float32)
 
         #因为是二维数据，所以协方差矩阵是一个二维对角矩阵，在这里简化为一个数组为2的
-        self.var = np.fabs(np.random.randn(self.n_clusters, data.shape[1], data.shape[1]))
-
-        self.var[0] = np.diag(np.random.rand(2))
-        self.var[1] = np.diag(np.random.rand(2))
-        self.var[2] = np.diag(np.random.rand(2))
+        self.var = np.fabs(np.random.randn(self.n_clusters, self.dimention_data, self.dimention_data))
+        for i in range(self.n_clusters):
+            self.var[i] = np.diag(np.random.rand(2))
 
         # self.var[0] = np.diag(np.array([2.1, 2.1], dtype=np.float32))
         # self.var[1] = np.diag(np.array([3.1, 4.1], dtype=np.float32))
         # self.var[2] = np.diag(np.array([8.1, 5.1], dtype=np.float32))
         weight_pi       = 1 / self.n_clusters #权重
         #self.weight_pi = [ weight_pi for i in range(self.n_clusters)]
-        self.weight_pi = [0.2, 0.3, 0.5]
-        self.gama  = np.zeros([data.shape[0], self.n_clusters],np.float32)# N * 3
-        self.Nk = np.zeros([0,0,0],dtype=np.float32)
+        self.weight_pi = [weight_pi for i in range(self.n_clusters)]
+        self.gama  = np.zeros([self.num_data, self.n_clusters],np.float32)# N * 3
+        self.Nk = np.zeros([self.n_clusters,],dtype=np.float32)
         self.loss = -float('Inf')
 
 
@@ -158,7 +154,7 @@ class GMM(object):
     
     def predict(self, data):
         # 屏蔽开始
-        print('x')
+        print('Start optimizer : ')
         iterate_i = 0
         while self.loss_cost(): #
             self.update_Nk_gama()
@@ -167,11 +163,12 @@ class GMM(object):
             self.update_pi()
 
             iterate_i += 1
-            print('iterate : ', iterate_i)
-            print('loss = ',self.loss)
-        print('mu', self.mu)
-        print('var', self.var)
-        return self.gama
+        #     print('iterate : ', iterate_i)
+        #     print('loss = ',self.loss)
+        # print('mu', self.mu)
+        # print('var', self.var)
+        cluster_total = np.argmax(self.gama, axis=1)
+        return cluster_total
 
 
 
@@ -209,8 +206,9 @@ if __name__ == '__main__':
 
     gmm = GMM(n_clusters=3)
     gmm.fit(X)
-    cat = gmm.predict(X)
-    cluster_total = np.argmax(cat, axis=1)
+    # cat = gmm.predict(X)
+    cluster_total = gmm.predict(X)
+    #cluster_total = np.argmax(cat, axis=1)
     cluster0 = np.where(cluster_total == 0)[0]
     cluster1 = np.where(cluster_total == 1)[0]
     cluster2 = np.where(cluster_total == 2)[0]

@@ -98,3 +98,21 @@ z = stats.norm(mu_params, sd_params).pdf((x[50],y[50]))
 
 
 print(z)
+
+from sklearn.datasets import make_circles
+from sklearn.datasets import make_moons
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig = plt.figure(1)
+x1, y1 = make_circles(n_samples=1000, factor=0.5, noise=0.1)
+# datasets.make_circles()专门用来生成圆圈形状的二维样本.factor表示里圈和外圈的距离之比.每圈共有n_samples/2个点，、
+plt.subplot(121)
+plt.title('make_circles function example')
+plt.scatter(x1[:, 0], x1[:, 1], marker='o', c=y1)
+
+plt.subplot(122)
+x1, y1 = make_moons(n_samples=1000, noise=0.1)
+plt.title('make_moons function example')
+plt.scatter(x1[:, 0], x1[:, 1], marker='o', c=y1)
+plt.show()

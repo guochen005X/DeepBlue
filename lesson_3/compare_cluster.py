@@ -25,9 +25,14 @@ np.random.seed(0)
 # ============
 print('start generate datasets ...')
 n_samples = 1500
+#生成环形数据
 noisy_circles = datasets.make_circles(n_samples=n_samples, factor=.5,
                                       noise=.05)
+#生成半圆数据
 noisy_moons = datasets.make_moons(n_samples=n_samples, noise=.05)
+#根据制定的特征数量、中心点数量、范围来生成积累数据
+#n_samples：待生成的样本数量，
+#默认分成三类
 blobs = datasets.make_blobs(n_samples=n_samples, random_state=8)
 no_structure = np.random.rand(n_samples, 2), None
 
@@ -175,7 +180,7 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
         colors = np.array(list(islice(cycle(['#377eb8', '#ff7f00', '#4daf4a',
                                              '#f781bf', '#a65628', '#984ea3',
                                              '#999999', '#e41a1c', '#dede00']),
-                                      int(max(y_pred) + 1))))
+                                      int(max(y_pred) + 1))))#y_pred反馈标签
         # add black color for outliers (if any)
         colors = np.append(colors, ["#000000"])
         plt.scatter(X[:, 0], X[:, 1], s=10, color=colors[y_pred])
@@ -188,5 +193,5 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
                  transform=plt.gca().transAxes, size=15,
                  horizontalalignment='right')
         plot_num += 1
-
 plt.show()
+
